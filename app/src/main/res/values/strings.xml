@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PhaseSizeApplication</string>
+    <string name="title_location_permission">Please allow access to location</string>
+    <string name="text_location_permission">Allow access?</string>
+    <string name="ok">Okay!</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
