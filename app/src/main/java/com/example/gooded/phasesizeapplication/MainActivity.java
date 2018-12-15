@@ -52,6 +52,8 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -75,6 +77,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private int month;
     private int year;
     private Button button;
+    private TextView sunriseTextView;
+    private TextView sunsetTextView;
+    DecimalFormat df;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -108,10 +113,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         button = findViewById(R.id.date);
+        sunriseTextView = findViewById(R.id.sunrise);
+        sunsetTextView = findViewById(R.id.sunset);
         Calendar c = Calendar.getInstance();
-        this.year = c.get(Calendar.YEAR);
-        this.month = c.get(Calendar.MONTH)+1;
-        this.day = c.get(Calendar.DATE);
+        year = c.get(Calendar.YEAR);
+        month = c.get(Calendar.MONTH)+1;
+        day = c.get(Calendar.DATE);
+        df = new DecimalFormat("#.##");
+        df.setRoundingMode(RoundingMode.CEILING);
         Log.i("day",this.day+"");
         String formattedDate = new SimpleDateFormat("EEE, MMM dd, yyyy", Locale.getDefault()).format(new Date());
         button.setText(formattedDate);
@@ -136,13 +145,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     latitude = checkIntent == 0.0 ? location.getLatitude() : getIntent.getDoubleExtra("latitude",0);
                     longitude = checkIntent == 0.0 ? location.getLongitude() : getIntent.getDoubleExtra("longitude",0);
                     LatLng position = new LatLng(latitude,longitude);
+                    updatePhaseTime();
                     updateMap(position);
-                    double sunrise = updatePhaseTime(latitude,longitude,MainActivity.this.day,MainActivity.this.month,MainActivity.this.year,true);
-                    double sunset = updatePhaseTime(latitude,longitude,MainActivity.this.day,MainActivity.this.month,MainActivity.this.year,false);
-                    TextView sunriseTextView = findViewById(R.id.sunrise);
-                    Log.i("sunrise",sunrise+"");
-                    Log.i("sunset",sunset+"");
-                    Log.i("Permission",position.toString());
                     intent.putExtra("latitude",latitude);
                     intent.putExtra("longitude",longitude);
                     stopLocationUpdates();
@@ -208,43 +212,63 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMarkerDragEnd(Marker marker) {
         LatLng position = marker.getPosition();
+        latitude = position.latitude;
+        longitude = position.longitude;
+        updatePhaseTime();
     }
 
-    public double updatePhaseTime(double latitude, double longitude, int day, int month, int year, boolean sunrise) {
+    public double calculatePhaseTime(double latitude, double longitude, int day, int month, int year, boolean sunrise) {
+        //Calculating the day of the year
         double N1 = Math.floor(275 * month / 9);
         double N2 = Math.floor((month + 9) / 12);
         double N3 = (1 + Math.floor((year - 4 * Math.floor(year / 4) + 2) / 3));
         double N = N1 - (N2 * N3) + day - 30;
+        double D2R = Math.PI/180;
+        double R2D = 180 / Math.PI;
+        //convert the longitude to hour value and calculate an approximate time
         double lngHour = longitude / 15;
         double t;
         double zenith = 90.83333333333333;
-        Log.i("values",day+","+month+","+year);
         if(sunrise) {
             t = N + ((6 - lngHour) / 24);
         }
         else {
             t = N + ((18 - lngHour) / 24);
         }
+
+        //calculate the Sun's mean anomaly
         double M = (0.9856 * t) - 3.289;
-        double L = M + (1.916 * Math.sin(M)) + (0.020 * Math.sin(2 * M)) + 282.634;
+
+        //calculate the Sun's true longitude
+        double L = M + (1.916 * Math.sin(M * D2R)) + (0.020 * Math.sin(2 * M * D2R)) + 282.634;
         if (L > 360) {
             L = L - 360;
         } else if (L < 0) {
             L = L + 360;
         }
-        double RA = Math.atan(0.91764 * Math.tan(L));
+
+        //calculate the Sun's right ascension
+        double RA = R2D * Math.atan(0.91764 * Math.tan(L * D2R));
         if (RA > 360) {
             RA = RA - 360;
         } else if (RA < 0) {
             RA = RA + 360;
         }
+
+        //right ascension value needs to be in the same quadrant as L
         double Lquadrant  = (Math.floor( L/90)) * 90;
         double RAquadrant = (Math.floor(RA/90)) * 90;
-        RA += Lquadrant - RAquadrant;
+        RA += (Lquadrant - RAquadrant);
+
+        //right ascension value needs to be converted into hours
         RA /= 15;
-        double sinDec = 0.39782 * Math.sin(L);
+
+        //calculate the Sun's declination
+        double sinDec = 0.39782 * Math.sin(L * D2R);
         double cosDec = Math.cos(Math.asin(sinDec));
-        double cosH = (Math.cos(zenith) - (sinDec * Math.sin(latitude))) / (cosDec * Math.cos(latitude));
+
+        //calculate the Sun's local hour angle
+        double cosH = (Math.cos(zenith * D2R) - (sinDec * Math.sin(latitude * D2R))) / (cosDec * Math.cos(latitude * D2R));
         if (cosH >  1) {
             //the sun never rises on this location (on the specified date)
         }
@@ -252,12 +276,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         if (cosH < -1) {
             //the sun never sets on this location (on the specified date)
         }
+
+        //finish calculating H and convert into hours
         double H;
         if(sunrise) {
-            H = 360 - Math.acos(cosH);
+            H = 360 - R2D * Math.acos(cosH);
         }
         else {
-            H = Math.acos(cosH);
+            H = R2D * Math.acos(cosH);
         }
         H/=15;
 
@@ -268,8 +294,17 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         } else if (UT < 0) {
             UT = UT + 24;
         }
-        double localT = UT + 5.5;
+        double localT = UT + 5.50;
         return localT;
+    }
+
+    public void updatePhaseTime() {
+        double sunrise = calculatePhaseTime(latitude,longitude,day,month,year,true);
+        double sunset = calculatePhaseTime(latitude,longitude,day,month,year,false);
+        sunriseTextView.setText(df.format(sunrise) + " A.M");
+        sunsetTextView.setText(df.format(sunset) + " P.M");
+        sunriseTextView.setVisibility(View.VISIBLE);
+        sunsetTextView.setVisibility(View.VISIBLE);
     }
 
     public void onDateSet(DatePicker view, int year, int month, int day) {
@@ -282,6 +317,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         Date date = calendar.getTime();
         String formattedDate = new SimpleDateFormat("EEE, MMM dd, yyyy", Locale.getDefault()).format(date);
         button.setText(formattedDate);
+        updatePhaseTime();
     }
 
     public void updateMap(LatLng position) {
