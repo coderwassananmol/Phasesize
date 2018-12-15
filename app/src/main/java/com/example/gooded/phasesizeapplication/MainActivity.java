@@ -2,6 +2,8 @@ package com.example.gooded.phasesizeapplication;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.DatePickerDialog;
+import android.app.Dialog;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +11,7 @@ import android.content.IntentSender;
 import android.location.Location;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -17,6 +20,7 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -48,9 +52,13 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
 
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerDragListener, DatePickerDialog.OnDateSetListener {
 
     private FusedLocationProviderClient mFusedLocationClient;
     private static Boolean mRequestingLocationUpdates = true;
@@ -63,6 +71,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private Intent intent;
     private Intent pinsIntent;
     private PinsViewModel pinsViewModel;
+    private int day;
+    private int month;
+    private int year;
+    private Button button;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -91,12 +103,18 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     };
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        button = findViewById(R.id.date);
+        Calendar c = Calendar.getInstance();
+        this.year = c.get(Calendar.YEAR);
+        this.month = c.get(Calendar.MONTH)+1;
+        this.day = c.get(Calendar.DATE);
+        Log.i("day",this.day+"");
+        String formattedDate = new SimpleDateFormat("EEE, MMM dd, yyyy", Locale.getDefault()).format(new Date());
+        button.setText(formattedDate);
         intent = new Intent(MainActivity.this, PlacesActivity.class);
         pinsIntent = new Intent(MainActivity.this, SavedPinsActivity.class);
         Intent getIntent = getIntent();
@@ -118,28 +136,19 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     latitude = checkIntent == 0.0 ? location.getLatitude() : getIntent.getDoubleExtra("latitude",0);
                     longitude = checkIntent == 0.0 ? location.getLongitude() : getIntent.getDoubleExtra("longitude",0);
                     LatLng position = new LatLng(latitude,longitude);
+                    updateMap(position);
+                    double sunrise = updatePhaseTime(latitude,longitude,MainActivity.this.day,MainActivity.this.month,MainActivity.this.year,true);
+                    double sunset = updatePhaseTime(latitude,longitude,MainActivity.this.day,MainActivity.this.month,MainActivity.this.year,false);
+                    TextView sunriseTextView = findViewById(R.id.sunrise);
+                    Log.i("sunrise",sunrise+"");
+                    Log.i("sunset",sunset+"");
                     Log.i("Permission",position.toString());
                     intent.putExtra("latitude",latitude);
                     intent.putExtra("longitude",longitude);
-                    mMap.clear();
-                    marker = mMap.addMarker(new MarkerOptions().position(position)
-                            .title("Marker in position"));
-                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position,13));
-                    CameraPosition cameraPosition = new CameraPosition.Builder()
-                            .target(position)      // Sets the center of the map to location user
-                            .zoom(18)                   // Sets the zoom
-                            .bearing(90)                // Sets the orientation of the camera to east
-                            .tilt(0)                   // Sets the tilt of the camera to 30 degrees
-                            .build();                   // Creates a CameraPosition from the builder
-                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                     stopLocationUpdates();
                 }
             }
         };
-        /*final Button button = findViewById(R.id.search_bar);
-        button.setOnClickListener(v -> {
-            startActivity(intent);
-        });*/
         RxPermissions rxPermissions = new RxPermissions(this);
         rxPermissions.setLogging(true);
         rxPermissions
@@ -166,6 +175,11 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         stopLocationUpdates();
     }
 
+    public void showDatePickerDialog(View v) {
+        DialogFragment newFragment = new DatePickerFragment();
+        newFragment.show(getSupportFragmentManager(), "datePicker");
+    }
+
     /**
      * Manipulates the map when it's available.
      * The API invokes this callback when the map is ready to be used.
@@ -178,6 +192,111 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        mMap.setOnMarkerDragListener(this);
+    }
+
+    @Override
+    public void onMarkerDragStart(Marker marker) {
+
+    }
+
+    @Override
+    public void onMarkerDrag(Marker marker) {
+
+    }
+
+    @Override
+    public void onMarkerDragEnd(Marker marker) {
+        LatLng position = marker.getPosition();
+    }
+
+    public double updatePhaseTime(double latitude, double longitude, int day, int month, int year, boolean sunrise) {
+        double N1 = Math.floor(275 * month / 9);
+        double N2 = Math.floor((month + 9) / 12);
+        double N3 = (1 + Math.floor((year - 4 * Math.floor(year / 4) + 2) / 3));
+        double N = N1 - (N2 * N3) + day - 30;
+        double lngHour = longitude / 15;
+        double t;
+        double zenith = 90.83333333333333;
+        Log.i("values",day+","+month+","+year);
+        if(sunrise) {
+            t = N + ((6 - lngHour) / 24);
+        }
+        else {
+            t = N + ((18 - lngHour) / 24);
+        }
+        double M = (0.9856 * t) - 3.289;
+        double L = M + (1.916 * Math.sin(M)) + (0.020 * Math.sin(2 * M)) + 282.634;
+        if (L > 360) {
+            L = L - 360;
+        } else if (L < 0) {
+            L = L + 360;
+        }
+        double RA = Math.atan(0.91764 * Math.tan(L));
+        if (RA > 360) {
+            RA = RA - 360;
+        } else if (RA < 0) {
+            RA = RA + 360;
+        }
+        double Lquadrant  = (Math.floor( L/90)) * 90;
+        double RAquadrant = (Math.floor(RA/90)) * 90;
+        RA += Lquadrant - RAquadrant;
+        RA /= 15;
+        double sinDec = 0.39782 * Math.sin(L);
+        double cosDec = Math.cos(Math.asin(sinDec));
+        double cosH = (Math.cos(zenith) - (sinDec * Math.sin(latitude))) / (cosDec * Math.cos(latitude));
+        if (cosH >  1) {
+            //the sun never rises on this location (on the specified date)
+        }
+
+        if (cosH < -1) {
+            //the sun never sets on this location (on the specified date)
+        }
+        double H;
+        if(sunrise) {
+            H = 360 - Math.acos(cosH);
+        }
+        else {
+            H = Math.acos(cosH);
+        }
+        H/=15;
+
+        double T = H + RA - (0.06571 * t) - 6.622;
+        double UT = T - lngHour;
+        if (UT > 24) {
+            UT = UT - 24;
+        } else if (UT < 0) {
+            UT = UT + 24;
+        }
+        double localT = UT + 5.5;
+        return localT;
+    }
+
+    public void onDateSet(DatePicker view, int year, int month, int day) {
+        // Do something with the date chosen by the user
+        this.day = day;
+        this.month = month;
+        this.year = year;
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(year, month, day);
+        Date date = calendar.getTime();
+        String formattedDate = new SimpleDateFormat("EEE, MMM dd, yyyy", Locale.getDefault()).format(date);
+        button.setText(formattedDate);
+    }
+
+    public void updateMap(LatLng position) {
+        mMap.clear();
+        marker = mMap.addMarker(new MarkerOptions().position(position)
+                .title("Marker in position")
+                .draggable(true));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position,13));
+        CameraPosition cameraPosition = new CameraPosition.Builder()
+                .target(position)      // Sets the center of the map to location user
+                .zoom(18)                   // Sets the zoom
+                .bearing(90)                // Sets the orientation of the camera to east
+                .tilt(0)                   // Sets the tilt of the camera to 30 degrees
+                .build();                   // Creates a CameraPosition from the builder
+        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }
 
     private void stopLocationUpdates() {

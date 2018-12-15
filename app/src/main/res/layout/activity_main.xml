@@ -17,7 +17,7 @@
     <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="0dp"
-        android:layout_weight="0.30"
+        android:layout_weight=".30"
         android:background="@color/colorButtonText"
         android:orientation="horizontal"
         android:paddingTop="10dp"
@@ -26,19 +26,23 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
+            android:layout_gravity="center_vertical"
             android:layout_marginStart="10dp"
             android:src="@mipmap/sun_round" />
         <ImageView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
+            android:layout_gravity="center_vertical"
             android:layout_marginStart="10dp"
             android:src="@mipmap/bluearrowup_round" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="6:00 A.M"
-            android:gravity="center"
+            android:text="10:00 A.M"
+            android:visibility="invisible"
+            android:gravity="center_vertical"
+            android:id="@+id/sunrise"
             android:layout_marginLeft="10dp"
             android:layout_marginStart="10dp"
             />
@@ -46,59 +50,29 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
+            android:layout_gravity="center_vertical"
             android:layout_marginStart="10dp"
-            android:layout_gravity="right"
             android:src="@mipmap/redarrowdown_round" />
         <TextView
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
-            android:text="10:00 P.M"
-            android:gravity="right"
+            android:gravity="center_vertical"
+            android:text="10:00 A.M"
+            android:visibility="invisible"
+            android:id="@+id/sunset"
             android:layout_marginRight="10dp"
             android:layout_marginEnd="10dp" />
     </LinearLayout>
-    <LinearLayout
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/colorButtonText"
-        android:orientation="horizontal"
-        android:paddingBottom="10dp"
-        >
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:layout_marginStart="10dp"
-            android:src="@mipmap/sun_round" />
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:layout_marginStart="10dp"
-            android:src="@mipmap/bluearrowup_round" />
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="6:00 A.M"
-            android:gravity="center"
-            android:layout_marginLeft="10dp"
-            android:layout_marginStart="10dp"
-            />
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:layout_marginStart="10dp"
-            android:layout_gravity="right"
-            android:src="@mipmap/redarrowdown_round" />
-        <TextView
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
-            android:text="10:00 P.M"
-            android:gravity="right"
-            android:layout_marginRight="10dp"
-            android:layout_marginEnd="10dp" />
-    </LinearLayout>
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.10"
+        android:background="@color/colorButton"
+        android:textColor="@color/colorButtonText"
+        android:id="@+id/date"
+        android:textAlignment="center"
+        android:onClick="showDatePickerDialog"
+        />
     <android.support.design.widget.BottomNavigationView
         android:id="@+id/navigation"
         android:layout_width="match_parent"

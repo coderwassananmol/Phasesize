@@ -27,7 +27,7 @@ public class SavedPinsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_saved_pins);
-
+        Intent intent = new Intent(SavedPinsActivity.this,MainActivity.class);
         recyclerView = findViewById(R.id.recyclerview);
         final PinsAdapter adapter = new PinsAdapter(this);
         recyclerView.setAdapter(adapter);
@@ -37,7 +37,9 @@ public class SavedPinsActivity extends AppCompatActivity {
             double geoLocationCoords[] = adapter.getGeoLocation(position);
             double latitude = geoLocationCoords[0];
             double longitude = geoLocationCoords[1];
-            Log.e("@@@@@",latitude+","+longitude);
+            intent.putExtra("latitude",latitude);
+            intent.putExtra("longitude",longitude);
+            startActivity(intent);
         }));
         pinsViewModel = ViewModelProviders.of(this).get(PinsViewModel.class);
 
