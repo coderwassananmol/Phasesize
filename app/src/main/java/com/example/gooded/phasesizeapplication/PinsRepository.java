@@ -1,0 +1,45 @@
+package com.example.gooded.phasesizeapplication;
+
+import android.app.Application;
+import android.arch.lifecycle.LiveData;
+import android.os.AsyncTask;
+
+import java.util.List;
+
+/**
+ * Created by root on 15/12/18.
+ */
+
+public class PinsRepository {
+    private PinsDao pinsDao;
+    private LiveData<List<Pins>> allPins;
+
+    PinsRepository(Application application) {
+        PinsDatabase db = PinsDatabase.getDatabase(application);
+        pinsDao = db.pinsDao();
+        allPins = pinsDao.getAllPins();
+    }
+
+    LiveData<List<Pins>> getAllWords() {
+        return allPins;
+    }
+
+    public void insert (Pins word) {
+        new insertAsyncTask(pinsDao).execute(word);
+    }
+
+    private static class insertAsyncTask extends AsyncTask<Pins, Void, Void> {
+
+        private PinsDao mAsyncTaskDao;
+
+        insertAsyncTask(PinsDao dao) {
+            mAsyncTaskDao = dao;
+        }
+
+        @Override
+        protected Void doInBackground(final Pins... params) {
+            mAsyncTaskDao.insert(params[0]);
+            return null;
+        }
+    }
+}

@@ -2,15 +2,23 @@ package com.example.gooded.phasesizeapplication;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.location.Location;
+import android.support.annotation.NonNull;
+import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.Manifest;
 import android.util.Log;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -25,6 +33,7 @@ import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStates;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.location.places.Place;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -51,11 +60,48 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private double longitude;
     private Marker marker;
     private GoogleMap mMap;
+    private Intent intent;
+    private Intent pinsIntent;
+    private PinsViewModel pinsViewModel;
+
+    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
+            = new BottomNavigationView.OnNavigationItemSelectedListener() {
+
+        @Override
+        public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+            switch (item.getItemId()) {
+                case R.id.navigation_pin:
+                    if(latitude == 0.0 || longitude == 0.0 ) {
+                        Toast.makeText(getApplicationContext(),"Initializing the geo coordindates. Please wait..",Toast.LENGTH_SHORT).show();
+                    }
+                    else {
+                        Pins pin = new Pins(latitude,longitude);
+                        pinsViewModel.insert(pin);
+                        Toast.makeText(getApplicationContext(),"Pin " + latitude + ","+longitude + " saved.",Toast.LENGTH_SHORT).show();
+                    }
+                    return true;
+                case R.id.navigation_search:
+                    startActivity(intent);
+                    return true;
+                case R.id.navigation_selectpin:
+                    startActivity(pinsIntent);
+                    return true;
+            }
+            return false;
+        }
+    };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        intent = new Intent(MainActivity.this, PlacesActivity.class);
+        pinsIntent = new Intent(MainActivity.this, SavedPinsActivity.class);
+        Intent getIntent = getIntent();
+        double checkIntent = getIntent.getDoubleExtra("latitude",0);
+        pinsViewModel = ViewModelProviders.of(this).get(PinsViewModel.class);
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         mLocationRequest = new LocationRequest();
         mLocationRequest.setInterval(10000);
@@ -69,9 +115,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     return;
                 }
                 for (Location location : locationResult.getLocations()) {
-                    latitude = location.getLatitude();
-                    longitude = location.getLongitude();
+                    latitude = checkIntent == 0.0 ? location.getLatitude() : getIntent.getDoubleExtra("latitude",0);
+                    longitude = checkIntent == 0.0 ? location.getLongitude() : getIntent.getDoubleExtra("longitude",0);
                     LatLng position = new LatLng(latitude,longitude);
+                    Log.i("Permission",position.toString());
+                    intent.putExtra("latitude",latitude);
+                    intent.putExtra("longitude",longitude);
                     mMap.clear();
                     marker = mMap.addMarker(new MarkerOptions().position(position)
                             .title("Marker in position"));
@@ -87,6 +136,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         };
+        /*final Button button = findViewById(R.id.search_bar);
+        button.setOnClickListener(v -> {
+            startActivity(intent);
+        });*/
         RxPermissions rxPermissions = new RxPermissions(this);
         rxPermissions.setLogging(true);
         rxPermissions
@@ -100,13 +153,11 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         Log.w("Permission","Permission is denied");
                     }
                 });
+        BottomNavigationView navigation = findViewById(R.id.navigation);
+        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-    }
-
-    public LatLng getLatLng(double latitude, double longitude) {
-        return new LatLng(latitude,longitude);
     }
 
     @Override
@@ -196,7 +247,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        final LocationSettingsStates states = LocationSettingsStates.fromIntent(data);
         switch (requestCode) {
             case 100:
                 switch (resultCode) {
