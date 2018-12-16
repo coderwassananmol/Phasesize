@@ -5,9 +5,6 @@ import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
 import android.support.annotation.NonNull;
 
-/**
- * Created by root on 15/12/18.
- */
 @Entity(tableName = "pins_table")
 public class Pins {
 

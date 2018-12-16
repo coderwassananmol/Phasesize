@@ -6,10 +6,6 @@ import android.os.AsyncTask;
 
 import java.util.List;
 
-/**
- * Created by root on 15/12/18.
- */
-
 public class PinsRepository {
     private PinsDao pinsDao;
     private LiveData<List<Pins>> allPins;

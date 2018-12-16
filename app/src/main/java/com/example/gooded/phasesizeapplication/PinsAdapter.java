@@ -9,10 +9,6 @@ import android.widget.TextView;
 
 import java.util.List;
 
-/**
- * Created by root on 15/12/18.
- */
-
 public class PinsAdapter extends RecyclerView.Adapter<PinsAdapter.PinsViewHolder> {
     class PinsViewHolder extends RecyclerView.ViewHolder {
         private final TextView pinsItemView;
@@ -43,10 +39,10 @@ public class PinsAdapter extends RecyclerView.Adapter<PinsAdapter.PinsViewHolder
     public void onBindViewHolder(PinsViewHolder holder, int position) {
         if (pinsList != null) {
             Pins current = pinsList.get(position);
-            holder.pinsItemView.setText(current.getLatitude()+","+current.getLongitude() + ": " + current.getId());
+            holder.pinsItemView.setText(String.format("%s,%s", current.getLatitude(), current.getLongitude()));
         } else {
             // Covers the case of data not being ready yet.
-            holder.pinsItemView.setText("No Pins");
+            holder.pinsItemView.setText(R.string.nopins);
         }
     }
 

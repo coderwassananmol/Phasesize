@@ -7,9 +7,6 @@ import android.arch.persistence.room.Query;
 
 import java.util.List;
 
-/**
- * Created by root on 15/12/18.
- */
 @Dao
 public interface PinsDao {
 

@@ -29,6 +29,8 @@
         </activity>
         <activity android:name=".PlacesActivity" />
         <activity android:name=".SavedPinsActivity" />
+
+        <receiver android:name=".NotificationPublisher" />
     </application>
 
 </manifest>

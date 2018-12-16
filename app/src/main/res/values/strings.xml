@@ -14,4 +14,8 @@
     <string name="hint_word">Word...</string>
     <string name="button_save">Save</string>
     <string name="empty_not_saved">Word not saved because it is empty.</string>
+    <string name="permissionnotfulfilled">Permission not fulfilled</string>
+    <string name="sunnotrise">Sun do not rises from here on this day.</string>
+    <string name="sunnotset">Sun do not sets today.</string>
+    <string name="nopins">No Pins</string>
 </resources>

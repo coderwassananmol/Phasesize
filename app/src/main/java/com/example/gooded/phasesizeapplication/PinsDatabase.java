@@ -8,10 +8,6 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 
-/**
- * Created by root on 15/12/18.
- */
-
 @Database(entities = {Pins.class}, version = 1)
 public abstract class PinsDatabase extends RoomDatabase {
     private static volatile PinsDatabase INSTANCE;

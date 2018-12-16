@@ -6,10 +6,6 @@ import android.arch.lifecycle.LiveData;
 
 import java.util.List;
 
-/**
- * Created by root on 15/12/18.
- */
-
 public class PinsViewModel extends AndroidViewModel {
     private PinsRepository pinsRepository;
 

@@ -13,10 +13,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
-/**
- * Created by root on 15/12/18.
- */
-
 public class DatePickerFragment extends DialogFragment {
 
     @Override

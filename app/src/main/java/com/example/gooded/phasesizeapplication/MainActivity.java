@@ -2,18 +2,22 @@ package com.example.gooded.phasesizeapplication;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.DatePickerDialog;
-import android.app.Dialog;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.location.Location;
+import android.os.Build;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.Manifest;
 import android.util.Log;
@@ -34,14 +38,9 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
-import com.google.android.gms.location.LocationSettingsResult;
-import com.google.android.gms.location.LocationSettingsStates;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
-import com.google.android.gms.location.places.Place;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.tbruyelle.rxpermissions2.RxPermissions;
 
@@ -66,9 +65,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private static Boolean mRequestingLocationUpdates = true;
     private LocationCallback mLocationCallback;
     private LocationRequest mLocationRequest;
+    private Marker marker;
     private double latitude;
     private double longitude;
-    private Marker marker;
     private GoogleMap mMap;
     private Intent intent;
     private Intent pinsIntent;
@@ -79,6 +78,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private Button button;
     private TextView sunriseTextView;
     private TextView sunsetTextView;
+    private int milisecondsDelay;
     DecimalFormat df;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
@@ -108,6 +108,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     };
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,7 +122,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         day = c.get(Calendar.DATE);
         df = new DecimalFormat("#.##");
         df.setRoundingMode(RoundingMode.CEILING);
-        Log.i("day",this.day+"");
         String formattedDate = new SimpleDateFormat("EEE, MMM dd, yyyy", Locale.getDefault()).format(new Date());
         button.setText(formattedDate);
         intent = new Intent(MainActivity.this, PlacesActivity.class);
@@ -135,10 +135,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         mLocationRequest.setFastestInterval(5000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         mLocationCallback = new LocationCallback() {
+            @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 if (locationResult == null) {
-                    Log.i("Permission","Location Result is null");
                     return;
                 }
                 for (Location location : locationResult.getLocations()) {
@@ -160,16 +160,16 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         Manifest.permission.ACCESS_COARSE_LOCATION) // ask single or multiple permission once
                 .subscribe(granted -> {
                     if (granted) {
-                        Log.i("Permission","All permissions are granted");
                         displayLocationSettingsRequest(this);
                     } else {
-                        Log.w("Permission","Permission is denied");
+                        Toast.makeText(this, R.string.permissionnotfulfilled,Toast.LENGTH_SHORT).show();
                     }
                 });
         BottomNavigationView navigation = findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
+        assert mapFragment != null;
         mapFragment.getMapAsync(this);
     }
 
@@ -209,6 +209,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
     public void onMarkerDragEnd(Marker marker) {
         LatLng position = marker.getPosition();
@@ -270,43 +271,108 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         //calculate the Sun's local hour angle
         double cosH = (Math.cos(zenith * D2R) - (sinDec * Math.sin(latitude * D2R))) / (cosDec * Math.cos(latitude * D2R));
         if (cosH >  1) {
-            //the sun never rises on this location (on the specified date)
+            Toast.makeText(this, R.string.sunnotrise,Toast.LENGTH_SHORT).show();
         }
 
-        if (cosH < -1) {
-            //the sun never sets on this location (on the specified date)
+        else if (cosH < -1) {
+            Toast.makeText(this, R.string.sunnotset,Toast.LENGTH_SHORT).show();
         }
 
-        //finish calculating H and convert into hours
-        double H;
-        if(sunrise) {
-            H = 360 - R2D * Math.acos(cosH);
-        }
         else {
-            H = R2D * Math.acos(cosH);
-        }
-        H/=15;
+            //finish calculating H and convert into hours
+            double H;
+            if(sunrise) {
+                H = 360 - R2D * Math.acos(cosH);
+            }
+            else {
+                H = R2D * Math.acos(cosH);
+            }
+            H/=15;
 
-        double T = H + RA - (0.06571 * t) - 6.622;
-        double UT = T - lngHour;
-        if (UT > 24) {
-            UT = UT - 24;
-        } else if (UT < 0) {
-            UT = UT + 24;
+            double T = H + RA - (0.06571 * t) - 6.622;
+            double UT = T - lngHour;
+            if (UT > 24) {
+                UT = UT - 24;
+            } else if (UT < 0) {
+                UT = UT + 24;
+            }
+            double localT = UT + 5.50;
+            return localT;
         }
-        double localT = UT + 5.50;
-        return localT;
+        return -1;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     public void updatePhaseTime() {
         double sunrise = calculatePhaseTime(latitude,longitude,day,month,year,true);
         double sunset = calculatePhaseTime(latitude,longitude,day,month,year,false);
-        sunriseTextView.setText(df.format(sunrise) + " A.M");
-        sunsetTextView.setText(df.format(sunset) + " P.M");
-        sunriseTextView.setVisibility(View.VISIBLE);
-        sunsetTextView.setVisibility(View.VISIBLE);
+        Log.i("Time",SystemClock.elapsedRealtime()+"");
+        if(sunrise != -1 && sunset != -1) {
+            int sunriseNumber = (int) sunrise;
+            int sunsetNumber = (int) sunset;
+            String sunriseDecimalString = df.format(sunrise - sunriseNumber);
+            String sunsetDecimalString = df.format(sunset - sunsetNumber);
+            double sunriseDecimal = Double.parseDouble(sunriseDecimalString);
+            double sunsetDecimal = Double.parseDouble(sunsetDecimalString);
+            if(sunriseDecimal > 0.60) {
+                sunriseDecimal-=0.60;
+                sunriseNumber++;
+            }
+            if(sunsetDecimal > 0.60) {
+                sunsetDecimal-=0.60;
+                sunsetNumber++;
+            }
+            int sunriseNo = (int) (sunriseDecimal*100);
+            int sunsetNo = (int) (sunsetDecimal*100);
+            if(sunriseNo < 10) {
+                sunriseDecimalString = "0"+ sunriseNo;
+            }
+            else {
+                sunriseDecimalString = sunriseNo + "";
+            }
+            if(sunsetNo < 10) {
+                sunsetDecimalString = "0" + sunsetNo;
+            }
+            else {
+                sunsetDecimalString = sunsetNo + "";
+            }
+            String sunriseTime = sunriseNumber + ":" + sunriseDecimalString + " A.M";
+            String sunsetTime = sunsetNumber + ":" + sunsetDecimalString + " P.M";
+            int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+            Log.i("sunsetNo",sunsetNumber+"");
+            Log.i("hour",hour+"");
+            milisecondsDelay = Math.abs(hour - sunsetNumber -1)*3600*1000;
+            Log.i("ms",milisecondsDelay+"");
+            sunriseTextView.setText(sunriseTime);
+            sunsetTextView.setText(sunsetTime);
+            sunriseTextView.setVisibility(View.VISIBLE);
+            sunsetTextView.setVisibility(View.VISIBLE);
+            scheduleNotification(getNotification("The time of golden hour"), milisecondsDelay);
+        }
     }
 
+    private void scheduleNotification(Notification notification, int delay) {
+
+        Intent notificationIntent = new Intent(this, NotificationPublisher.class);
+        notificationIntent.putExtra(NotificationPublisher.NOTIFICATION_ID, 1);
+        notificationIntent.putExtra(NotificationPublisher.NOTIFICATION, notification);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        long futureInMillis = SystemClock.elapsedRealtime() + delay;
+        AlarmManager alarmManager = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+        alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, futureInMillis, pendingIntent);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
+    private Notification getNotification(String content) {
+        Notification.Builder builder = new Notification.Builder(this);
+        builder.setContentTitle("The rise of golden hour");
+        builder.setContentText(content);
+        builder.setSmallIcon(R.drawable.ic_home_black_24dp);
+        return builder.build();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     public void onDateSet(DatePicker view, int year, int month, int day) {
         // Do something with the date chosen by the user
         this.day = day;
@@ -367,7 +433,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         result.addOnCompleteListener(task -> {
             try {
                 LocationSettingsResponse response = task.getResult(ApiException.class);
-                Log.i("Permission","Satisfied");
                 startLocationUpdates();
             } catch (ApiException exception) {
                 switch (exception.getStatusCode()) {
@@ -393,7 +458,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
                         // Location settings are not satisfied. However, we have no way to fix the
                         // settings so we won't show the dialog.
-                        Log.i("Permission","Not bearable");
+                        Toast.makeText(this, R.string.permissionnotfulfilled,Toast.LENGTH_SHORT).show();
                         break;
                 }
             }
@@ -406,14 +471,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             case 100:
                 switch (resultCode) {
                     case Activity.RESULT_OK:
-                        startLocationUpdates();
-                        Log.i("Permission","Location updating");
                         // All required changes were successfully made
-
+                        startLocationUpdates();
                         break;
                     case Activity.RESULT_CANCELED:
                         // The user was asked to change settings, but chose not to
-                        Log.i("Permission","Location permission was cancelled");
+                        Toast.makeText(this, R.string.permissionnotfulfilled,Toast.LENGTH_SHORT).show();
                         break;
                     default:
                         break;
