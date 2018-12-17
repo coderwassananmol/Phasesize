@@ -10,6 +10,7 @@ import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.graphics.Color;
 import android.location.Location;
 import android.os.Build;
 import android.os.SystemClock;
@@ -41,6 +42,8 @@ import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.Task;
 import com.tbruyelle.rxpermissions2.RxPermissions;
 
@@ -89,7 +92,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             switch (item.getItemId()) {
                 case R.id.navigation_pin:
                     if(latitude == 0.0 || longitude == 0.0 ) {
-                        Toast.makeText(getApplicationContext(),"Initializing the geo coordindates. Please wait..",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), R.string.initcoord,Toast.LENGTH_SHORT).show();
                     }
                     else {
                         Pins pin = new Pins(latitude,longitude);
@@ -150,6 +153,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     intent.putExtra("latitude",latitude);
                     intent.putExtra("longitude",longitude);
                     stopLocationUpdates();
+                    updatePolyLines();
                 }
             }
         };
@@ -216,6 +220,24 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         latitude = position.latitude;
         longitude = position.longitude;
         updatePhaseTime();
+        updatePolyLines();
+    }
+
+    public void updatePolyLines() {
+        PolylineOptions sunSet = new PolylineOptions()
+                .add(new LatLng(latitude, longitude))
+                .add(new LatLng(latitude+0.10, longitude+0.20))  //Add 30 KM to the west.
+                .color(Color.RED)
+                .width(5)
+                .geodesic(true);// Closes the polyline.
+        PolylineOptions sunRise = new PolylineOptions()
+                .add(new LatLng(latitude, longitude))
+                .add(new LatLng(latitude+0.10, longitude-0.20))  //Add 30 KM to the west.
+                .color(Color.BLUE)
+                .width(5)
+                .geodesic(true);// Closes the polyline.
+        Polyline polyline1 = mMap.addPolyline(sunSet);
+        Polyline polyline2 = mMap.addPolyline(sunRise);
     }
 
     public double calculatePhaseTime(double latitude, double longitude, int day, int month, int year, boolean sunrise) {
@@ -389,7 +411,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     public void updateMap(LatLng position) {
         mMap.clear();
         marker = mMap.addMarker(new MarkerOptions().position(position)
-                .title("Marker in position")
+                .title(getString(R.string.marker))
                 .draggable(true));
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position,13));
         CameraPosition cameraPosition = new CameraPosition.Builder()

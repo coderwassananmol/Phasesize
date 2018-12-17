@@ -19,4 +19,6 @@
     <string name="sunnotset">Sun do not sets today.</string>
     <string name="nopins">No Pins</string>
     <string name="google_key">AIzaSyDF3-LPg6h7EH6SfyMwxkeJU_5KIwV5gmk</string>
+    <string name="initcoord">Initializing the geo coordindates. Please wait..</string>
+    <string name="marker">Marker in position</string>
 </resources>
