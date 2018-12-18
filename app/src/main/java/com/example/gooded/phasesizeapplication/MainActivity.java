@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.graphics.Color;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
@@ -29,6 +30,12 @@ import android.widget.DatePicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResolvableApiException;
@@ -54,8 +61,12 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -81,8 +92,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private Button button;
     private TextView sunriseTextView;
     private TextView sunsetTextView;
+    private TextView moonriseTextView;
+    private TextView moonsetTextView;
     private int milisecondsDelay;
     DecimalFormat df;
+    private Polyline polyline1;
+    private Polyline polyline2;
+    private Polyline polyline3;
+    private Polyline polyline4;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -119,6 +136,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         button = findViewById(R.id.date);
         sunriseTextView = findViewById(R.id.sunrise);
         sunsetTextView = findViewById(R.id.sunset);
+        moonriseTextView = findViewById(R.id.moonrise);
+        moonsetTextView = findViewById(R.id.moonset);
         Calendar c = Calendar.getInstance();
         year = c.get(Calendar.YEAR);
         month = c.get(Calendar.MONTH)+1;
@@ -224,6 +243,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void updatePolyLines() {
+        if(polyline1 != null && polyline2 != null) {
+            polyline1.remove();
+            polyline2.remove();
+            polyline3.remove();
+            polyline4.remove();
+        }
         PolylineOptions sunSet = new PolylineOptions()
                 .add(new LatLng(latitude, longitude))
                 .add(new LatLng(latitude+0.10, longitude+0.20))  //Add 30 KM to the west.
@@ -236,8 +261,22 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 .color(Color.BLUE)
                 .width(5)
                 .geodesic(true);// Closes the polyline.
-        Polyline polyline1 = mMap.addPolyline(sunSet);
-        Polyline polyline2 = mMap.addPolyline(sunRise);
+        PolylineOptions moonSet = new PolylineOptions()
+                .add(new LatLng(latitude, longitude))
+                .add(new LatLng(latitude-0.10, longitude-0.20))  //Add 30 KM to the west.
+                .color(Color.YELLOW)
+                .width(5)
+                .geodesic(true);// Closes the polyline.
+        PolylineOptions moonRise = new PolylineOptions()
+                .add(new LatLng(latitude, longitude))
+                .add(new LatLng(latitude-0.10, longitude+0.20))  //Add 30 KM to the west.
+                .color(Color.GREEN)
+                .width(5)
+                .geodesic(true);// Closes the polyline.
+        polyline1 = mMap.addPolyline(sunSet);
+        polyline2 = mMap.addPolyline(sunRise);
+        polyline3 = mMap.addPolyline(moonSet);
+        polyline4 = mMap.addPolyline(moonRise);
     }
 
     public double calculatePhaseTime(double latitude, double longitude, int day, int month, int year, boolean sunrise) {
@@ -328,7 +367,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     public void updatePhaseTime() {
         double sunrise = calculatePhaseTime(latitude,longitude,day,month,year,true);
         double sunset = calculatePhaseTime(latitude,longitude,day,month,year,false);
-        Log.i("Time",SystemClock.elapsedRealtime()+"");
         if(sunrise != -1 && sunset != -1) {
             int sunriseNumber = (int) sunrise;
             int sunsetNumber = (int) sunset;
@@ -358,19 +396,74 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             else {
                 sunsetDecimalString = sunsetNo + "";
             }
-            String sunriseTime = sunriseNumber + ":" + sunriseDecimalString + " A.M";
-            String sunsetTime = sunsetNumber + ":" + sunsetDecimalString + " P.M";
+            String sunriseTime = sunriseNumber + ":" + sunriseDecimalString;
+            String sunsetTime = sunsetNumber + ":" + sunsetDecimalString;
             int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
-            Log.i("sunsetNo",sunsetNumber+"");
+            int mins = Calendar.getInstance().get(Calendar.MINUTE);
             Log.i("hour",hour+"");
-            milisecondsDelay = Math.abs(hour - sunsetNumber -1)*3600*1000;
-            Log.i("ms",milisecondsDelay+"");
+            Log.i("mins",mins+"");
+            int hourDiff = sunsetNumber - hour - 1;
+            int minDiff = sunsetNo - mins;
+            Log.i("hourDiff",hourDiff+"");
+            Log.i("minDiff",minDiff+"");
+            boolean showNotification = true;
+            if (hourDiff + 1 > 0) {
+                if(hourDiff + 1 == 1)
+                    if (minDiff >= 0)
+                        milisecondsDelay = minDiff*60*1000;
+                    else
+                        showNotification = false;
+                else {
+                    if(minDiff == 0)
+                        milisecondsDelay = hourDiff*3600*1000;
+                    else if(minDiff > 0)
+                        milisecondsDelay = hourDiff*3600*1000 +
+                                minDiff*60*1000;
+                    else
+                        milisecondsDelay = hourDiff*60 + minDiff*60*1000;
+                }
+            }
+            else
+                showNotification = false;
             sunriseTextView.setText(sunriseTime);
             sunsetTextView.setText(sunsetTime);
             sunriseTextView.setVisibility(View.VISIBLE);
             sunsetTextView.setVisibility(View.VISIBLE);
-            scheduleNotification(getNotification("The time of golden hour"), milisecondsDelay);
+            try {
+                Date date1=new SimpleDateFormat("dd/mm/yyyy").parse(day+"/"+month+"/"+year);
+                sendRequest(date1);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+            if(showNotification) {
+                Log.i("miliseconds",milisecondsDelay+"");
+                scheduleNotification(getNotification("The time of golden hour"), milisecondsDelay);
+            }
         }
+    }
+
+    public void sendRequest(Date date1) {
+        RequestQueue queue = Volley.newRequestQueue(this);
+        Date date = date1;
+
+        String url = "https://get-moon-time.herokuapp.com/?latitude="+latitude+"&longitude="+longitude+"&date="+Uri.encode(date.toString());
+        Log.i("URI",url);
+        JsonObjectRequest jsonObjectRequest =
+                    new JsonObjectRequest (Request.Method.GET, url, null,
+                            response -> {
+                                try {
+                                    String moonrise = (String) response.get("rise");
+                                    String moonset = (String) response.get("set");
+                                    moonriseTextView.setText(moonrise);
+                                    moonsetTextView.setText(moonset);
+                                    moonsetTextView.setVisibility(View.VISIBLE);
+                                    moonriseTextView.setVisibility(View.VISIBLE);
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+                            },
+                        error -> Log.i("Response: " , error.getMessage()));
+        queue.add(jsonObjectRequest);
     }
 
     private void scheduleNotification(Notification notification, int delay) {

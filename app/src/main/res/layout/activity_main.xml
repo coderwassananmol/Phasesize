@@ -17,10 +17,9 @@
     <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="0dp"
-        android:layout_weight=".30"
+        android:layout_weight=".15"
         android:background="@color/colorButtonText"
         android:orientation="horizontal"
-        android:paddingTop="10dp"
         >
         <ImageView
             android:layout_width="wrap_content"
@@ -43,15 +42,15 @@
             android:visibility="invisible"
             android:gravity="center_vertical"
             android:id="@+id/sunrise"
-            android:layout_marginLeft="10dp"
-            android:layout_marginStart="10dp"
+            android:layout_marginLeft="20dp"
+            android:layout_marginStart="20dp"
             />
         <ImageView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
+            android:layout_marginLeft="20dp"
             android:layout_gravity="center_vertical"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="20dp"
             android:src="@mipmap/redarrowdown_round" />
         <TextView
             android:layout_width="fill_parent"
@@ -60,8 +59,56 @@
             android:text="10:00 A.M"
             android:visibility="invisible"
             android:id="@+id/sunset"
-            android:layout_marginRight="10dp"
-            android:layout_marginEnd="10dp" />
+            android:layout_marginLeft="20dp"
+            android:layout_marginStart="20dp" />
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="0dp"
+        android:layout_weight=".15"
+        android:background="@color/colorButtonText"
+        android:orientation="horizontal"
+        >
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="10dp"
+            android:src="@mipmap/moon" />
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="10dp"
+            android:src="@mipmap/moonrisearrow_round" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="10:00 A.M"
+            android:visibility="invisible"
+            android:gravity="center_vertical"
+            android:id="@+id/moonrise"
+            android:layout_marginLeft="20dp"
+            android:layout_marginStart="20dp"
+            />
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="10dp"
+            android:src="@mipmap/moonset_round" />
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:gravity="center_vertical"
+            android:text="10:00 A.M"
+            android:visibility="invisible"
+            android:id="@+id/moonset"
+            android:layout_marginLeft="20dp"
+            android:layout_marginStart="20dp" />
     </LinearLayout>
     <Button
         android:layout_width="match_parent"
