@@ -1,2 +1,2 @@
-# gooded-androidtask
-Phasesize application - GoodEd Android Task
+# Phasesize Application
+Calculating sunrise/sunset and moonrise/moonset time using geocoordinates of your location.
